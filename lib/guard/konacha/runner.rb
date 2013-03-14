@@ -80,6 +80,7 @@ module Guard
           image = test_results[:failures] > 0 ? :failed : :success
           ::Guard::Notifier.notify(text, :title => 'Konacha Specs', :image => image )
         end
+        test_results
       end
 
       EMPTY_RESULT = {
