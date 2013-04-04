@@ -1,29 +1,3 @@
-require 'guard/konacha'
-
-module Guard
-  class Konacha
-    class Runner
-
-      attr_reader :full_runs, :run_calls
-      alias :test_run :run
-      def run(args=[])
-        @run_calls ||= []
-        @run_calls << {
-          :time => Time.now,
-          :arguments => args
-        }
-
-        @full_runs ||= 0
-        if args == []
-          @full_runs += 1
-        end
-        test_run(args)
-      end
-
-    end
-  end
-end
-
 module GuardKonachaSpecHelpers
 
   def prepare_guard_konacha
@@ -40,11 +14,22 @@ module GuardKonachaSpecHelpers
       :reporter => @konacha_reporter
     })
     Konacha::Runner.should_receive(:new).any_number_of_times.with(@session).and_return konacha_runner
+
+    @spec_exists = true
+    @session.stub(:evaluate_script) do |arg|
+      if arg == 'typeof window.top.Konacha'
+        @spec_exists ? 'object' : 'undefined'
+      end
+    end
     guard_konacha
   end
 
   def spec_file_exists
-    @session.should_receive(:evaluate_script).any_number_of_times.with('typeof window.top.Konacha').and_return 'object'
+    @spec_exists = true
+  end
+
+  def spec_file_is_missing
+    @spec_exists = false
   end
 
   def default_result
@@ -66,7 +51,27 @@ module GuardKonachaSpecHelpers
   end
 
   def has_run_all_tests?
-    @guard_konacha.runner.full_runs > 0
+    @guard_konacha.runner.run_calls.select do |call|
+      return true if call[:arguments] == []
+    end
+    false
+  end
+
+  def has_rerun_failing_spec?
+    failing_spec = first_failing_spec
+
+    failing_spec_runs = @guard_konacha.runner.run_calls.select do |call|
+      call[:arguments].first == failing_spec
+    end
+    failing_spec_runs.length > 1
+  end
+
+  def first_failing_spec
+    failing_spec = @guard_konacha.runner.run_calls.select do |call|
+      call[:result][:failures] > 0
+    end.map do |call|
+      call[:arguments].first
+    end.first
   end
 
 end

@@ -47,6 +47,7 @@ module Guard
       def run(paths=[])
         return UI.info("Konacha server not running") unless konacha_running?
         @passed_previous_failing = false
+        @run_last_failing = false
 
         UI.info "Konacha Running: #{paths.empty? ? 'All tests' : paths.join(' ')}"
 
@@ -67,6 +68,10 @@ module Guard
             mark_url_as_failing paths[index]
           else
             mark_url_as_passing paths[index]
+          end
+
+          if individual_result[:valid_spec] == false
+            @run_last_failing = true
           end
 
           test_results[:examples] += individual_result[:examples]
@@ -91,7 +96,11 @@ module Guard
 
         if @passed_previous_failing
           run
+        elsif @run_last_failing
+          @failing_paths -= paths
+          run @failing_paths if @failing_paths.length > 0
         end
+
         test_results
       end
 
@@ -106,7 +115,9 @@ module Guard
         session.reset!
         unless valid_spec? url
           UI.warning "No spec found for: #{path}"
-          return EMPTY_RESULT
+          return EMPTY_RESULT.merge(
+            :valid_spec => false
+          )
         end
 
         runner = ::Konacha::Runner.new session

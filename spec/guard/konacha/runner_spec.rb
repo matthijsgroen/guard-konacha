@@ -279,7 +279,7 @@ describe Guard::Konacha::Runner do
 
       it 'aborts the test with a missing result' do
         ::Konacha::Runner.should_receive(:new).never
-        subject.run_tests('dummy url', missing_spec).should eql described_class::EMPTY_RESULT
+        subject.run_tests('dummy url', missing_spec)[:valid_spec].should be_false
       end
 
       it 'outputs that the spec is missing' do
