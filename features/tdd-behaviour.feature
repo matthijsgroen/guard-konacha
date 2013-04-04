@@ -2,19 +2,17 @@ Feature:
   As a developer I want Guard to anticipate my TDD workflow
   so that I can do my work more efficiently
 
-  @wip
   Scenario: Completing a failing spec
     Given I have a failing spec file
     When I make the spec file pass
     Then I want all specs to run
 
-  @todo
   Scenario: Saving a file after passing spec
     Given I have a passing spec file
     When I save a tracked file without a matching spec file
     Then nothing happens
 
-  @todo
+  @wip
   Scenario: Saving a file after a failing spec
     Given I have a failing spec file
     When I save a tracked file without a matching spec file

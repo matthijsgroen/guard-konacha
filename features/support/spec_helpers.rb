@@ -1,3 +1,29 @@
+require 'guard/konacha'
+
+module Guard
+  class Konacha
+    class Runner
+
+      attr_reader :full_runs, :run_calls
+      alias :test_run :run
+      def run(args=[])
+        @run_calls ||= []
+        @run_calls << {
+          :time => Time.now,
+          :arguments => args
+        }
+
+        @full_runs ||= 0
+        if args == []
+          @full_runs += 1
+        end
+        test_run(args)
+      end
+
+    end
+  end
+end
+
 module GuardKonachaSpecHelpers
 
   def prepare_guard_konacha
@@ -5,8 +31,7 @@ module GuardKonachaSpecHelpers
     @session = double('Capybara Session', :reset! => true, :visit => true)
     guard_konacha.runner.stub({
       :konacha_running? => true,
-      :session => @session,
-      :run => default_result
+      :session => @session
     })
 
     @konacha_reporter = double('konacha reporter')
@@ -15,11 +40,6 @@ module GuardKonachaSpecHelpers
       :reporter => @konacha_reporter
     })
     Konacha::Runner.should_receive(:new).any_number_of_times.with(@session).and_return konacha_runner
-
-    @run_all = 0
-    guard_konacha.runner.stub(:run).with(no_args()) do
-      @run_all += 1
-    end
     guard_konacha
   end
 
@@ -46,7 +66,7 @@ module GuardKonachaSpecHelpers
   end
 
   def has_run_all_tests?
-    @run_all.should be > 0
+    @guard_konacha.runner.full_runs > 0
   end
 
 end

@@ -28,6 +28,7 @@ module Guard
       def initialize(options={})
         @options = DEFAULT_OPTIONS.merge(options)
         UI.info "Guard::Konacha Initialized"
+        @failing_paths = []
       end
 
       def launch_konacha(action)
@@ -45,6 +46,7 @@ module Guard
 
       def run(paths=[])
         return UI.info("Konacha server not running") unless konacha_running?
+        @passed_previous_failing = false
 
         UI.info "Konacha Running: #{paths.empty? ? 'All tests' : paths.join(' ')}"
 
@@ -60,6 +62,12 @@ module Guard
 
         urls.each_with_index do |url, index|
           individual_result = run_tests(url, paths[index])
+
+          if individual_result[:failures] > 0
+            mark_url_as_failing paths[index]
+          else
+            mark_url_as_passing paths[index]
+          end
 
           test_results[:examples] += individual_result[:examples]
           test_results[:failures] += individual_result[:failures]
@@ -79,6 +87,10 @@ module Guard
         if @options[:notification]
           image = test_results[:failures] > 0 ? :failed : :success
           ::Guard::Notifier.notify(text, :title => 'Konacha Specs', :image => image )
+        end
+
+        if @passed_previous_failing
+          run
         end
         test_results
       end
@@ -119,6 +131,17 @@ module Guard
       end
 
       private
+
+      def mark_url_as_failing path
+        @failing_paths << path
+      end
+
+      def mark_url_as_passing path
+        if @failing_paths.include? path
+          @failing_paths -= [path]
+          @passed_previous_failing = true
+        end
+      end
 
       def konacha_url(path = nil)
         url_path = path.gsub(/^#{@options[:spec_dir]}\/?/, '').gsub(/\.coffee$/, '').gsub(/\.js$/, '') unless path.nil?
